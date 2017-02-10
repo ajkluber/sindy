@@ -8,19 +8,25 @@ from sklearn.cross_validation import KFold
 from scipy import stats
 
 
-def iterative_solver_regularized(X, Y, max_iter, centers, f):
-    """
-        input
-            Y: derivative array of size (n, n_dim) [n = number of traj points, n_dim = system dimensionality]
-            X: function database array of size (m, n) [m = database dimension]
-            lambda: float, sparsity parameter
-            max_iter: number of iterations (for LAsso and iterative)
-            
-        output
-            coefficients: array of size (m, n_dim) if regular or Lasso calculation
-                                        (max_iter, m, n_dim) if iterative calculation
+def iterative_solver_regularized(X, Y, max_iter=10):
+    """Solve least squares solution 
+
+    Parameters
+    ----------
+    X : np.ndarray (m, n)
+
+    Y : np.ndarray (n, n_dim)
+        The time derivative is .
+
+    max_iter : int, default=10
+        Number of iterations to try. Each iteration enforces higher sparsity.
+
+    Returns
+    -------
+    coeff : (m, n_dim)
     """
 
+    # Need good stopping criterion
 
     # initial guess: least square fitting
     coef = np.linalg.lstsq(X, Y, rcond=1e-10)[0]
@@ -32,7 +38,6 @@ def iterative_solver_regularized(X, Y, max_iter, centers, f):
     iter_lamb = [lambda_t]
     iter_err = [np.sum((np.dot(X,coef) - Y)**2)]
     iter_coef = [coef]
-    iter_force = [np.array([ np.dot(f(i), coef) for i in centers ])]
 
     for k in range(max_iter):     # loop over number of iterations to consider
         #print 'sparse regression, iteration = ' + str(k)
@@ -56,13 +61,11 @@ def iterative_solver_regularized(X, Y, max_iter, centers, f):
         lambda_t = 1.5*np.min(np.abs(coef[coef != 0]));
 
         error = np.sum((np.dot(X,coef) - Y)**2)
-        Force_eff = np.array([ np.dot(f(i), coef) for i in centers ])
 
         iter_coef.append(np.copy(coef))
         iter_err.append(error)
         iter_lamb.append(lambda_t)
-        iter_force.append(Force_eff)
 
-    return np.array(iter_coef), np.array(iter_force), np.array(iter_err), np.array(iter_lamb)
+    return np.array(iter_coef), np.array(iter_err), np.array(iter_lamb)
 
 
